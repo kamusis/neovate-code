@@ -1,3 +1,12 @@
+## 0.17.2
+
+`2025-11-17`
+
+- feat: add tool description length limit with environment variable configuration by [@sorrycc](https://github.com/sorrycc)
+- feat: add custom headers to OpenRouter provider configuration by [@sorrycc](https://github.com/sorrycc)
+- feat: add sherlock dash alpha and sherlock think alpha models with openrouter provider support by [@sorrycc](https://github.com/sorrycc)
+
+
 ## 0.17.1
 
 `2025-11-14`
