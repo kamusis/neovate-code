@@ -800,7 +800,7 @@ export const models: ModelMap = {
     tool_call: true,
     knowledge: '2025-03-31',
     release_date: '2025-11-24',
-    last_updated: '2025-08-01',
+    last_updated: '2025-11-24',
     modalities: { input: ['text', 'image'], output: ['text'] },
     open_weights: false,
     limit: { context: 200000, output: 64000 },
