@@ -72,7 +72,8 @@ export async function resolveTools(opts: ResolveToolsOpts) {
       ]
     : [];
   const mcpTools = await getMcpTools(opts.context);
-  return [
+
+  const allTools = [
     ...readonlyTools,
     ...askUserQuestionTools,
     ...writeTools,
@@ -80,6 +81,17 @@ export async function resolveTools(opts: ResolveToolsOpts) {
     ...backgroundTools,
     ...mcpTools,
   ];
+
+  const toolsConfig = opts.context.config.tools;
+  if (!toolsConfig || Object.keys(toolsConfig).length === 0) {
+    return allTools;
+  }
+
+  return allTools.filter((tool) => {
+    // Check if the tool is disabled (only explicitly set to false will disable)
+    const isDisabled = toolsConfig[tool.name] === false;
+    return !isDisabled;
+  });
 }
 
 async function getMcpTools(context: Context): Promise<Tool[]> {
