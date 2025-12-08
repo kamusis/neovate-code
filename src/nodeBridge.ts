@@ -1152,8 +1152,14 @@ class NodeHandlerRegistry {
         args: [{ cwd: data.cwd, quiet: false }],
         type: PluginHookType.Series,
       });
+      const m = (
+        await this.messageBus.messageHandlers.get('session.getModel')?.({
+          cwd: data.cwd,
+          sessionId: data.sessionId,
+        })
+      )?.data.model;
       const { model, providers, error } = await resolveModelWithContext(
-        null,
+        m,
         context,
       );
 
@@ -1207,6 +1213,27 @@ class NodeHandlerRegistry {
       };
     });
 
+    this.messageBus.registerHandler('session.getModel', async (data) => {
+      const { cwd, sessionId } = data;
+      const context = await this.getContext(cwd);
+      const sessionConfigManager = new SessionConfigManager({
+        logPath: context.paths.getSessionLogPath(sessionId),
+      });
+      const model =
+        // 1. model from argv config
+        context.argvConfig?.model ||
+        // 2. model from session config
+        sessionConfigManager.config.model ||
+        // 3. model from context config
+        context.config.model;
+      return {
+        success: true,
+        data: {
+          model,
+        },
+      };
+    });
+
     this.messageBus.registerHandler('session.send', async (data) => {
       const { message, cwd, sessionId, model, attachments, parentUuid } = data;
       const context = await this.getContext(cwd);
@@ -1215,6 +1242,14 @@ class NodeHandlerRegistry {
         context,
       });
 
+      const resolvedModel =
+        // e.g. model from slash command or agent
+        model ||
+        (await this.messageBus.messageHandlers.get('session.getModel')?.({
+          cwd,
+          sessionId,
+        }))!.data.model;
+
       const abortController = new AbortController();
       const key = buildSignalKey(cwd, project.session.id);
       this.abortControllers.set(key, abortController);
@@ -1222,7 +1257,7 @@ class NodeHandlerRegistry {
       const fn = data.planMode ? project.plan : project.send;
       const result = await fn.call(project, message, {
         attachments,
-        model,
+        model: resolvedModel,
         parentUuid,
         thinking: data.thinking,
         onMessage: async (opts) => {
@@ -1381,9 +1416,13 @@ class NodeHandlerRegistry {
     });
 
     this.messageBus.registerHandler('session.compact', async (data) => {
-      const { cwd, messages } = data;
+      const { cwd, messages, sessionId } = data;
       const context = await this.getContext(cwd);
-      const model = (await resolveModelWithContext(null, context)).model!;
+      const m = (await this.messageBus.request('session.getModel', {
+        cwd,
+        sessionId,
+      }))!.data.model;
+      const model = (await resolveModelWithContext(m, context)).model!;
       const summary = await compact({
         messages,
         model,
@@ -1536,6 +1575,32 @@ class NodeHandlerRegistry {
         };
       },
     );
+
+    this.messageBus.registerHandler('session.config.set', async (data) => {
+      const { cwd, sessionId, key, value } = data;
+      const context = await this.getContext(cwd);
+      const sessionConfigManager = new SessionConfigManager({
+        logPath: context.paths.getSessionLogPath(sessionId),
+      });
+      (sessionConfigManager.config as any)[key] = value;
+      sessionConfigManager.write();
+      return {
+        success: true,
+      };
+    });
+
+    this.messageBus.registerHandler('session.config.remove', async (data) => {
+      const { cwd, sessionId, key } = data;
+      const context = await this.getContext(cwd);
+      const sessionConfigManager = new SessionConfigManager({
+        logPath: context.paths.getSessionLogPath(sessionId),
+      });
+      delete (sessionConfigManager.config as any)[key];
+      sessionConfigManager.write();
+      return {
+        success: true,
+      };
+    });
 
     //////////////////////////////////////////////
     // sessions
