@@ -34,7 +34,7 @@ $ alias t="bun /path/to/neovate/src/cli.ts"
 $ t
 ```
 
-Note: After installation, you can use either `neovate` or the shorter alias `neo` to run the CLI.
+Note: After installation, you can use either `neovate` to run the CLI.
 
 Before you commit, you need to run the `ready` script to check if the code is ready to be committed.
 
