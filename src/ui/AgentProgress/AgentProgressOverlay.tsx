@@ -184,8 +184,8 @@ export function AgentInProgress({
       <Box paddingLeft={1} marginTop={0}>
         <Text color="gray" dimColor>
           {' '}
-          (Press ctrl+o to expand) · {stats.toolCalls} tool uses ·{' '}
-          {formatTokens(stats.tokens)} tokens
+          {!transcriptMode && '(Press ctrl+o to expand) · '}
+          {stats.toolCalls} tool uses · {formatTokens(stats.tokens)} tokens
         </Text>
       </Box>
     </Box>
