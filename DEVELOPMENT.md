@@ -29,6 +29,10 @@ Report any issues or ideas you encounter during dogfooding.
 
 ## Pull Request Guidelines
 
+### Good First Issues
+
+Issues labeled `good first issue` are reserved for external contributors. Core team members should not work on these issues.
+
 ### Keep PRs Small
 
 - Split large features into incremental, reviewable PRs
