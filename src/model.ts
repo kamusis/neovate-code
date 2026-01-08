@@ -1964,8 +1964,7 @@ function mergeConfigProviders(
   Object.entries(configProviders).forEach(([providerId, config]) => {
     let provider = mergedProviders[providerId] || {};
     provider = defu(config, provider) as Provider;
-
-    if (provider.createModelType === 'anthropic' && !provider.createModel) {
+    if (provider.createModelType === 'anthropic') {
       provider.createModel = defaultAnthropicModelCreator;
     }
     if (!provider.createModel) {
