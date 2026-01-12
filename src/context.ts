@@ -14,7 +14,7 @@ import {
   PluginHookType,
   PluginManager,
 } from './plugin';
-import { notificationSoundPlugin } from './plugins/notificationSound';
+import { notificationSoundPlugin } from './plugins/notification';
 import { SkillManager } from './skill';
 
 type ContextOpts = {
