@@ -79,14 +79,10 @@ export function App() {
     hideForkModal,
     forkParentUuid,
     forkCounter,
-    bridge,
-    sessionId,
-    cwd,
     transcriptMode,
     toggleTranscriptMode,
   } = useAppStore();
-  const [forkMessages, setForkMessages] = React.useState<any[]>([]);
-  const [forkLoading, setForkLoading] = React.useState(false);
+  const messages = useAppStore((s) => s.messages);
 
   useInput((input, key) => {
     // Ctrl+O: Toggle transcript mode
@@ -105,28 +101,6 @@ export function App() {
       return;
     }
   });
-
-  React.useEffect(() => {
-    if (!forkModalVisible) return;
-    if (!bridge || !cwd || !sessionId) {
-      setForkMessages([]);
-      return;
-    }
-    setForkLoading(true);
-    (async () => {
-      try {
-        const res = await bridge.request('session.messages.list', {
-          cwd,
-          sessionId,
-        });
-        setForkMessages(res.data?.messages || []);
-      } catch (_e) {
-        setForkMessages([]);
-      } finally {
-        setForkLoading(false);
-      }
-    })();
-  }, [forkModalVisible, bridge, cwd, sessionId]);
   return (
     <TerminalSizeProvider>
       <Box
@@ -141,7 +115,7 @@ export function App() {
         {transcriptMode ? <TranscriptModeIndicator /> : <ChatInput />}
         {forkModalVisible && (
           <ForkModal
-            messages={forkMessages as any}
+            messages={messages as any}
             onSelect={(uuid) => {
               fork(uuid);
             }}
