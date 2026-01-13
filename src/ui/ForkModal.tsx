@@ -110,40 +110,44 @@ export function ForkModal({ messages, onSelect, onClose }: ForkModalProps) {
         </Text>
       </Box>
       <Box flexDirection="column">
-        {userMessages.map((message, index) => {
-          const isSelected = index === selectedIndex;
-          const { text: preview, isBashInput } = getMessagePreview(message);
-          const timestamp = getTimestamp(message);
+        {userMessages.length === 0 ? (
+          <Text dimColor>No previous messages to jump to</Text>
+        ) : (
+          userMessages.map((message, index) => {
+            const isSelected = index === selectedIndex;
+            const { text: preview, isBashInput } = getMessagePreview(message);
+            const timestamp = getTimestamp(message);
 
-          return (
-            <Box key={message.uuid} marginBottom={0}>
-              <Text
-                color={isSelected ? 'cyan' : 'white'}
-                bold={isSelected}
-                backgroundColor={isSelected ? 'blue' : undefined}
-              >
-                {isSelected ? '> ' : '  '}
-                {timestamp} |{' '}
-              </Text>
-              {isBashInput && (
+            return (
+              <Box key={message.uuid} marginBottom={0}>
                 <Text
-                  color={UI_COLORS.CHAT_BORDER_BASH}
+                  color={isSelected ? 'cyan' : 'white'}
                   bold={isSelected}
                   backgroundColor={isSelected ? 'blue' : undefined}
                 >
-                  !{' '}
+                  {isSelected ? '> ' : '  '}
+                  {timestamp} |{' '}
                 </Text>
-              )}
-              <Text
-                color={isSelected ? 'cyan' : 'white'}
-                bold={isSelected}
-                backgroundColor={isSelected ? 'blue' : undefined}
-              >
-                {preview}
-              </Text>
-            </Box>
-          );
-        })}
+                {isBashInput && (
+                  <Text
+                    color={UI_COLORS.CHAT_BORDER_BASH}
+                    bold={isSelected}
+                    backgroundColor={isSelected ? 'blue' : undefined}
+                  >
+                    !{' '}
+                  </Text>
+                )}
+                <Text
+                  color={isSelected ? 'cyan' : 'white'}
+                  bold={isSelected}
+                  backgroundColor={isSelected ? 'blue' : undefined}
+                >
+                  {preview}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
       <Box marginTop={1}>
         <Text dimColor>
