@@ -7,24 +7,16 @@ const DEFAULT_HOST = '127.0.0.1';
 export async function runServer(opts: {
   cwd: string;
   contextCreateOpts: any;
+  port?: number;
+  host?: string;
 }): Promise<() => Promise<void>> {
-  const { default: yargsParser } = await import('yargs-parser');
-  const argv = yargsParser(process.argv.slice(2), {
-    alias: {
-      port: 'p',
-      host: 'h',
-    },
-    number: ['port'],
-    string: ['host'],
-  });
-
   const port = await portfinder.getPortPromise({
-    port: Number.parseInt(String(argv.port || DEFAULT_PORT), 10),
+    port: opts.port ?? DEFAULT_PORT,
   });
 
   const server = new WebServer({
     port,
-    host: argv.host || DEFAULT_HOST,
+    host: opts.host ?? DEFAULT_HOST,
     contextCreateOpts: opts.contextCreateOpts,
     cwd: opts.cwd,
   });

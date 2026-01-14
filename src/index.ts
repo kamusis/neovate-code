@@ -55,6 +55,7 @@ export type Argv = {
   appendSystemPrompt?: string;
   approvalMode?: string;
   cwd?: string;
+  host?: string;
   language?: string;
   model?: string;
   outputFormat?: string;
@@ -65,6 +66,8 @@ export type Argv = {
   resume?: string;
   systemPrompt?: string;
   tools?: string;
+  // number
+  port?: number;
   // array
   plugin: string[];
   mcpConfig: string[];
@@ -87,10 +90,12 @@ export async function parseArgs(argv: any) {
     },
     array: ['plugin', 'mcpConfig'],
     boolean: ['help', 'mcp', 'quiet', 'continue', 'version'],
+    number: ['port'],
     string: [
       'appendSystemPrompt',
       'approvalMode',
       'cwd',
+      'host',
       'language',
       'mcpConfig',
       'model',
@@ -383,6 +388,8 @@ export async function runNeovate(opts: {
     const shutdown = await runServer({
       cwd,
       contextCreateOpts,
+      port: argv.port,
+      host: argv.host,
     });
     return { shutdown };
   }

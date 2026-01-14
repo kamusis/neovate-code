@@ -66,8 +66,8 @@ async function main(): Promise<void> {
   }
 
   const serverArgs = ['server'];
-  if (args.port) serverArgs.push('-p', String(args.port));
-  if (args.host) serverArgs.push('-h', args.host);
+  if (args.port) serverArgs.push('--port', String(args.port));
+  if (args.host) serverArgs.push('--host', args.host);
 
   const { parseArgs: neovateParseArgs, runNeovate } = await import(
     '../src/index'
