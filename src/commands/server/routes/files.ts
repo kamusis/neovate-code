@@ -32,7 +32,7 @@ const filesRoute: FastifyPluginAsync<ContextCreateOpts> = async (app, opts) => {
     async (request, reply) => {
       try {
         const { filePath } = request.query;
-        const cwd = opts.cwd;
+        const cwd = path.resolve(opts.cwd);
         const absolutePath = path.resolve(cwd, filePath);
 
         if (!absolutePath.startsWith(cwd)) {
@@ -80,7 +80,7 @@ const filesRoute: FastifyPluginAsync<ContextCreateOpts> = async (app, opts) => {
     async (request, reply) => {
       try {
         const { filePath, content } = request.body;
-        const cwd = opts.cwd;
+        const cwd = path.resolve(opts.cwd);
         const absolutePath = path.resolve(cwd, filePath);
 
         if (!absolutePath.startsWith(cwd)) {

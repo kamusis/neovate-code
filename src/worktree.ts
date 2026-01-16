@@ -543,9 +543,10 @@ export async function getWorktreeFromPath(cwd: string): Promise<Worktree> {
   const gitRoot = await getGitRoot(cwd);
   const worktrees = await listWorktrees(gitRoot);
 
+  const normalizedCwd = path.resolve(cwd);
   // Check if current path is inside a worktree
   for (const worktree of worktrees) {
-    if (cwd.startsWith(worktree.path)) {
+    if (normalizedCwd.startsWith(path.resolve(worktree.path))) {
       return worktree;
     }
   }

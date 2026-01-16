@@ -56,7 +56,8 @@ async function processImage(
 
     // Security: Validate file path to prevent traversal attacks
     const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(cwd)) {
+    const normalizedCwd = path.resolve(cwd);
+    if (!resolvedPath.startsWith(normalizedCwd)) {
       throw new Error('Invalid file path: path traversal detected');
     }
 
