@@ -1,20 +1,9 @@
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import fastify, { type FastifyInstance } from 'fastify';
-import fs from 'fs';
-import path from 'pathe';
-import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import type { ContextCreateOpts } from '../../context';
 import { NodeBridge } from '../../nodeBridge';
-import { isLocal } from '../../utils/isLocal';
 import { WebSocketTransport } from './websocketTransport';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const BROWSER_DIST_PATH = isLocal()
-  ? path.resolve(__dirname, '../../../dist/browser')
-  : path.resolve(__dirname, './browser');
 
 const BASE_API_PREFIX = '/api';
 
@@ -51,42 +40,7 @@ class WebServer {
   }
 
   private async registerPlugins() {
-    await this.app.register(import('@fastify/cors'), {
-      origin: true,
-      methods: ['GET', 'HEAD', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-      credentials: true,
-      allowedHeaders: [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-        'Accept',
-        'Origin',
-        'Sec-WebSocket-Protocol',
-      ],
-    });
-
-    await this.app.register(import('@fastify/compress'), {
-      global: true,
-    });
-
-    await this.app.register(import('@fastify/static'), {
-      root: BROWSER_DIST_PATH,
-      prefix: '/',
-      wildcard: false,
-    });
-
-    this.app.get('*', async (request, reply) => {
-      if (request.url.startsWith(BASE_API_PREFIX)) {
-        return reply.status(404).send('Not Found');
-      }
-
-      const htmlPath = path.join(BROWSER_DIST_PATH, 'index.html');
-      if (fs.existsSync(htmlPath)) {
-        return reply.sendFile('index.html');
-      } else {
-        return reply.status(404).send('Not Found');
-      }
-    });
+    // No plugins needed
   }
 
   private async setupRoutes() {
