@@ -85,6 +85,23 @@ Choose one of the following methods to debug the CLI:
 3. Add `-q` to the command to print the quiet logs.
 4. Open session files under `~/.neovate/projects/` directory to check the logs.
 
+### Testing NodeBridge Handlers
+
+Use the `test-nodebridge.ts` script to test NodeBridge message handlers directly:
+
+```bash
+# List all available handlers
+bun scripts/test-nodebridge.ts --list
+
+# Test a specific handler with --key=value arguments
+bun scripts/test-nodebridge.ts models.list
+bun scripts/test-nodebridge.ts models.test --model=anthropic/claude-sonnet-4-20250514
+bun scripts/test-nodebridge.ts utils.getPaths --cwd /path/to/dir --maxFiles 100
+
+# Pass complex data as JSON (--data takes priority over --key value)
+bun scripts/test-nodebridge.ts models.test --data '{"model":"anthropic/claude-sonnet-4-20250514","timeout":5000}'
+```
+
 ## Release
 
 ```bash
