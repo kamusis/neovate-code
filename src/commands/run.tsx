@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import clipboardy from 'clipboardy';
 import { Box, render, Text, useInput } from 'ink';
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Context } from '../context';
 import { DirectTransport, MessageBus } from '../messageBus';
 import { NodeBridge } from '../nodeBridge';
@@ -76,13 +76,13 @@ User: "Create a new directory named test"
 Reply: "mkdir test"
 
 User: "Find all log files containing 'error'"
-Reply: "find . -name '*.log' -exec grep -l 'error' {} \\;"
+Reply: "find . -name '*.log' -exec grep -l 'error' {} \\\\;"
 
 User: "ls -la" (user directly provided a command)
 Reply: "ls -la"
 
 User: "I want to compress all images in the current directory"
-Reply: "find . -type f ( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" ) -exec mogrify -quality 85% {} \\;"
+Reply: "find . -type f ( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" ) -exec mogrify -quality 85% {} \\\\;"
 `;
 
 // ============================================================================
@@ -113,48 +113,24 @@ function executeShell(
 }
 
 // ============================================================================
-// CommandCard Component
-// ============================================================================
-
-interface CommandCardProps {
-  command: string;
-}
-
-const CommandCard: React.FC<CommandCardProps> = ({ command }) => {
-  return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-      paddingY={0}
-    >
-      <Text bold color="cyan">
-        💻 Shell Command
-      </Text>
-      <Box marginLeft={2} marginTop={0}>
-        <Text color="yellow">{command}</Text>
-      </Box>
-    </Box>
-  );
-};
-
-// ============================================================================
 // RunActionSelector Component
 // ============================================================================
 
 interface ActionItem {
   value: RunAction;
   label: string;
-  icon: string;
+  key: string;
 }
 
-const ACTIONS: ActionItem[] = [
-  { value: 'execute', label: 'Execute command', icon: '▶️' },
-  { value: 'copy', label: 'Copy to clipboard', icon: '📋' },
-  { value: 'edit', label: 'Edit command', icon: '✏️' },
-  { value: 'regenerate', label: 'Edit prompt & regenerate', icon: '🔁' },
-  { value: 'cancel', label: 'Cancel', icon: '❌' },
+const BASE_ACTIONS: ActionItem[] = [
+  { value: 'execute', label: 'Execute', key: '1' },
+  { value: 'copy', label: 'Copy to clipboard', key: '2' },
+  { value: 'edit', label: 'Edit command', key: '3' },
+  { value: 'regenerate', label: 'Edit prompt & regenerate', key: '4' },
+];
+
+const TAIL_ACTIONS: ActionItem[] = [
+  { value: 'cancel', label: 'Cancel', key: 'q' },
 ];
 
 interface RunActionSelectorProps {
@@ -170,19 +146,23 @@ const RunActionSelector: React.FC<RunActionSelectorProps> = ({
   disabled = false,
   showRetry = false,
 }) => {
-  const actions = showRetry
-    ? [
-        { value: 'retry' as RunAction, label: 'Retry command', icon: '🔄' },
-        ...ACTIONS.slice(1),
-      ]
-    : ACTIONS;
+  const actions = useMemo(() => {
+    const baseActions = showRetry
+      ? [
+          { value: 'retry' as RunAction, label: 'Retry', key: '1' },
+          ...BASE_ACTIONS.slice(1),
+        ]
+      : BASE_ACTIONS;
+    return [...baseActions, ...TAIL_ACTIONS];
+  }, [showRetry]);
+
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useInput(
-    (_input, key) => {
+    (input, key) => {
       if (disabled) return;
 
-      if (key.escape) {
+      if (key.escape || input === 'q') {
         onCancel();
         return;
       }
@@ -202,10 +182,10 @@ const RunActionSelector: React.FC<RunActionSelectorProps> = ({
         return;
       }
 
-      // Quick select by number (1-4)
-      const num = Number.parseInt(_input, 10);
-      if (num >= 1 && num <= actions.length) {
-        onSelect(actions[num - 1].value);
+      // Quick select by key
+      const action = actions.find((a) => a.key === input);
+      if (action) {
+        onSelect(action.value);
       }
     },
     { isActive: !disabled },
@@ -213,29 +193,24 @@ const RunActionSelector: React.FC<RunActionSelectorProps> = ({
 
   return (
     <Box flexDirection="column">
-      <Text bold>What would you like to do?</Text>
-      <Box flexDirection="column" marginTop={1}>
+      <Text>Actions:</Text>
+      <Box flexDirection="column">
         {actions.map((action, index) => {
           const isSelected = index === selectedIndex;
+          const prefix = isSelected ? '>' : ' ';
+          const keyLabel = `[${action.key}]`;
+
           return (
             <Box key={action.value}>
-              <Text
-                color={isSelected ? 'cyan' : undefined}
-                inverse={isSelected}
-                dimColor={disabled}
-              >
-                {isSelected ? '● ' : '○ '}
-                {action.icon} {action.label}
+              <Text color={isSelected ? 'cyan' : undefined} dimColor={disabled}>
+                {prefix} {keyLabel} {action.label}
               </Text>
             </Box>
           );
         })}
       </Box>
-      <Box marginTop={1}>
-        <Text color="gray" dimColor>
-          ↑↓ Navigate Enter Select Esc Cancel
-        </Text>
-      </Box>
+      <Text> </Text>
+      <Text dimColor>↑↓ select enter confirm q cancel</Text>
     </Box>
   );
 };
@@ -246,59 +221,21 @@ const RunActionSelector: React.FC<RunActionSelectorProps> = ({
 
 interface ErrorDisplayProps {
   error: string;
-  onRetry?: () => void;
-  onEdit?: () => void;
   onExit: () => void;
 }
 
-const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
-  error,
-  onRetry,
-  onEdit,
-  onExit,
-}) => {
+const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onExit }) => {
   useInput((input, key) => {
     if (key.escape || input === 'n' || input === 'N') {
       onExit();
-    }
-    if ((input === 'r' || input === 'R') && onRetry) {
-      onRetry();
-    }
-    if ((input === 'e' || input === 'E') && onEdit) {
-      onEdit();
     }
   });
 
   return (
     <Box flexDirection="column">
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="red"
-        paddingX={1}
-      >
-        <Text bold color="red">
-          ❌ Execution Failed
-        </Text>
-        <Box marginTop={1}>
-          <Text color="red">{error}</Text>
-        </Box>
-      </Box>
-      {(onRetry || onEdit) && (
-        <Box marginTop={1} flexDirection="column">
-          <Text color="yellow">Options:</Text>
-          {onRetry && <Text color="gray"> [r] Retry command</Text>}
-          {onEdit && <Text color="gray"> [e] Edit command</Text>}
-          <Text color="gray"> [n/Esc] Exit</Text>
-        </Box>
-      )}
-      {!onRetry && !onEdit && (
-        <Box marginTop={1}>
-          <Text color="gray" dimColor>
-            Press Esc to exit...
-          </Text>
-        </Box>
-      )}
+      <Text color="red">error: {error}</Text>
+      <Text> </Text>
+      <Text dimColor>esc exit</Text>
     </Box>
   );
 };
@@ -471,7 +408,7 @@ const RunUI: React.FC<RunUIProps> = ({
           setState({
             phase: 'success',
             command,
-            output: 'Command copied to clipboard!',
+            output: 'Copied to clipboard',
           });
           setTimeout(() => setShouldExit(true), 1000);
           break;
@@ -534,23 +471,10 @@ const RunUI: React.FC<RunUIProps> = ({
   // Render based on current state
   return (
     <Box flexDirection="column" padding={1}>
-      {/* Header */}
-      <Box marginBottom={1} flexDirection="column">
-        <Text bold color="cyan">
-          🚀 AI Shell Command Generator
-        </Text>
-        {options.model && (
-          <Text dimColor>
-            Model: <Text color="yellow">{options.model}</Text>
-          </Text>
-        )}
-      </Box>
-
       {/* Idle Phase - Prompt Input */}
       {state.phase === 'idle' && (
         <Box flexDirection="column">
-          <Text bold>Enter your request:</Text>
-          <Box marginTop={1}>
+          <Box>
             <Text color="cyan">{'> '}</Text>
             <TextInput
               value={promptInput}
@@ -561,157 +485,136 @@ const RunUI: React.FC<RunUIProps> = ({
               columns={{ useTerminalSize: true, prefix: 3 }}
             />
           </Box>
-          <Box marginTop={1}>
-            <Text color="gray" dimColor>
-              Press Enter to generate command, Esc to exit
-            </Text>
-          </Box>
+          <Text> </Text>
+          <Text dimColor>enter submit esc exit</Text>
         </Box>
       )}
 
       {/* Generating Phase */}
       {state.phase === 'generating' && (
-        <Box flexDirection="column">
-          <Text color="yellow">⏳ Converting to shell command...</Text>
-          <Box marginTop={1}>
-            <Text dimColor>Prompt: {state.prompt}</Text>
-          </Box>
+        <Box>
+          <Text color="yellow">Generating command with {options.model}...</Text>
         </Box>
       )}
 
       {/* Displaying Phase */}
       {state.phase === 'displaying' && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box marginTop={1}>
-            <RunActionSelector
-              onSelect={handleAction}
-              onCancel={() => setShouldExit(true)}
-            />
-          </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <RunActionSelector
+            onSelect={handleAction}
+            onCancel={() => setShouldExit(true)}
+          />
         </Box>
       )}
 
       {/* Editing Phase */}
       {state.phase === 'editing' && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box marginTop={1} flexDirection="column">
-            <Text bold>Edit command:</Text>
-            <Box marginTop={1}>
-              <Text color="cyan">{'> '}</Text>
-              <TextInput
-                value={state.editedCommand}
-                onChange={(value) =>
-                  setState((prev) =>
-                    prev.phase === 'editing'
-                      ? { ...prev, editedCommand: value }
-                      : prev,
-                  )
-                }
-                onSubmit={handleEditSubmit}
-                // Account for "> " prefix (2) + outer padding (1)
-                columns={{ useTerminalSize: true, prefix: 3 }}
-              />
-            </Box>
-            <Box marginTop={1}>
-              <Text color="gray" dimColor>
-                Press Enter to save, Esc to cancel
-              </Text>
-            </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <Text>Edit command:</Text>
+          <Box>
+            <Text color="cyan">{'> '}</Text>
+            <TextInput
+              value={state.editedCommand}
+              onChange={(value) =>
+                setState((prev) =>
+                  prev.phase === 'editing'
+                    ? { ...prev, editedCommand: value }
+                    : prev,
+                )
+              }
+              onSubmit={handleEditSubmit}
+              // Account for "> " prefix (2) + outer padding (1)
+              columns={{ useTerminalSize: true, prefix: 3 }}
+            />
           </Box>
+          <Text> </Text>
+          <Text dimColor>enter save esc cancel</Text>
         </Box>
       )}
 
       {/* Editing Prompt Phase */}
       {state.phase === 'editingPrompt' && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box marginTop={1} flexDirection="column">
-            <Text bold>Edit prompt to regenerate:</Text>
-            <Box marginTop={1}>
-              <Text color="magenta">{'> '}</Text>
-              <TextInput
-                value={state.editedPrompt}
-                onChange={(value) =>
-                  setState((prev) =>
-                    prev.phase === 'editingPrompt'
-                      ? { ...prev, editedPrompt: value }
-                      : prev,
-                  )
-                }
-                onSubmit={handlePromptEditSubmit}
-                // Account for "> " prefix (2) + outer padding (1)
-                columns={{ useTerminalSize: true, prefix: 3 }}
-              />
-            </Box>
-            <Box marginTop={1}>
-              <Text color="gray" dimColor>
-                Press Enter to regenerate command, Esc to cancel
-              </Text>
-            </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <Text>Edit prompt:</Text>
+          <Box>
+            <Text color="cyan">{'> '}</Text>
+            <TextInput
+              value={state.editedPrompt}
+              onChange={(value) =>
+                setState((prev) =>
+                  prev.phase === 'editingPrompt'
+                    ? { ...prev, editedPrompt: value }
+                    : prev,
+                )
+              }
+              onSubmit={handlePromptEditSubmit}
+              // Account for "> " prefix (2) + outer padding (1)
+              columns={{ useTerminalSize: true, prefix: 3 }}
+            />
           </Box>
+          <Text> </Text>
+          <Text dimColor>enter regenerate esc cancel</Text>
         </Box>
       )}
 
       {/* Executing Phase */}
       {state.phase === 'executing' && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box marginTop={1}>
-            <Text color="yellow">⏳ Executing command...</Text>
-          </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <Text dimColor>Executing...</Text>
         </Box>
       )}
 
       {/* Success Phase */}
       {state.phase === 'success' && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box
-            marginTop={1}
-            flexDirection="column"
-            borderStyle="round"
-            borderColor="green"
-            paddingX={1}
-          >
-            <Text bold color="green">
-              ✅ {state.output || 'Command executed successfully'}
-            </Text>
-          </Box>
-          <Box marginTop={1}>
-            <Text color="gray" dimColor>
-              Press Esc to exit...
-            </Text>
-          </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <Text color="green">
+            ok: {state.output || 'Command executed successfully'}
+          </Text>
+          <Text> </Text>
+          <Text dimColor>esc exit</Text>
         </Box>
       )}
 
-      {/* Error Phase */}
+      {/* Error Phase with command */}
       {state.phase === 'error' && state.command && (
         <Box flexDirection="column">
-          <CommandCard command={state.command} />
-          <Box
-            marginTop={1}
-            flexDirection="column"
-            borderStyle="round"
-            borderColor="red"
-            paddingX={1}
-          >
-            <Text bold color="red">
-              ❌ Execution Failed
-            </Text>
-            <Box marginTop={1}>
-              <Text color="red">{state.error}</Text>
-            </Box>
-          </Box>
-          <Box marginTop={1}>
-            <RunActionSelector
-              onSelect={handleAction}
-              onCancel={() => setShouldExit(true)}
-              showRetry={true}
-            />
-          </Box>
+          <Text>
+            <Text dimColor>command: </Text>
+            <Text color="yellow">{state.command}</Text>
+          </Text>
+          <Text> </Text>
+          <Text color="red">error: {state.error}</Text>
+          <Text> </Text>
+          <RunActionSelector
+            onSelect={handleAction}
+            onCancel={() => setShouldExit(true)}
+            showRetry={true}
+          />
         </Box>
       )}
 
@@ -723,7 +626,7 @@ const RunUI: React.FC<RunUIProps> = ({
       {/* Cancelled Phase */}
       {state.phase === 'cancelled' && (
         <Box>
-          <Text color="gray">Command cancelled.</Text>
+          <Text dimColor>Cancelled.</Text>
         </Box>
       )}
     </Box>
