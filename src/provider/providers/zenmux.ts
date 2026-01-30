@@ -31,4 +31,8 @@ export const zenmuxProvider: Provider = {
     'deepseek/deepseek-reasoner': {},
     'moonshotai/kimi-k2.5': {},
   },
+  headers: {
+    'X-Title': 'Neovate Code',
+    'HTTP-Referer': 'https://neovateai.dev/',
+  },
 };

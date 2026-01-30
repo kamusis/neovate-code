@@ -19,4 +19,7 @@ export const cerebrasProvider: Provider = {
       limit: { context: 65000, output: 32000 },
     },
   },
+  headers: {
+    'X-Cerebras-3rd-Party-Integration': 'Neovate Code',
+  },
 };

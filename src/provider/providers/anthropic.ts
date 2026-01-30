@@ -19,4 +19,8 @@ export const anthropicProvider: Provider = {
     'claude-opus-4-5': {},
   },
   apiFormat: ApiFormat.Anthropic,
+  headers: {
+    'X-Title': 'Neovate Code',
+    'HTTP-Referer': 'https://neovateai.dev/',
+  },
 };
