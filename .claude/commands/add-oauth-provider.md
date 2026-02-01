@@ -29,7 +29,11 @@ Add a new OAuth provider named $ARGUMENTS following the patterns in:
    - Add case in `providers.login.pollOAuth` handler
    - Add case in `providers.login.completeOAuth` handler
 
-5. **Login UI** (`src/slash-commands/builtin/login.tsx`):
+5. **NodeBridge types** (`src/nodeBridge.types.ts`):
+   - Add provider id to `ProvidersLoginInitOAuthInput.providerId` union type
+   - Add provider id to `ProvidersLoginCompleteOAuthInput.providerId` union type
+
+6. **Login UI** (`src/slash-commands/builtin/login.tsx`):
    - Add provider-specific title and waiting message in OAuth UI section
 
 Run typecheck after implementation.

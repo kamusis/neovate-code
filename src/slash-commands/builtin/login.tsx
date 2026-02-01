@@ -469,9 +469,11 @@ export const LoginSelect: React.FC<LoginSelectProps> = ({
         ? 'GitHub Copilot Authorization'
         : oauthState.providerId === 'qwen'
           ? 'Qwen Authorization'
-          : 'Antigravity Authorization';
+          : oauthState.providerId === 'codex'
+            ? 'Codex Authorization'
+            : 'Antigravity Authorization';
     const waitingMessage =
-      oauthState.providerId === 'qwen'
+      oauthState.providerId === 'qwen' || oauthState.providerId === 'codex'
         ? 'Waiting for authorization in browser...'
         : 'Waiting for authorization...';
 

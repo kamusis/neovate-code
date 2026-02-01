@@ -1,4 +1,4 @@
-import { GithubProvider, QwenProvider } from 'oauth-providers';
+import { GithubProvider, QwenProvider, CodexProvider } from 'oauth-providers';
 import { ConfigManager } from '../../config';
 import type { Context } from '../../context';
 import type { MessageBus } from '../../messageBus';
@@ -6,7 +6,7 @@ import { type Provider, resolveModelWithContext } from '../../provider/model';
 import { isOAuthProvider } from '../../provider/providers/oauth';
 
 interface OAuthSession {
-  provider: GithubProvider | QwenProvider;
+  provider: GithubProvider | QwenProvider | CodexProvider;
   providerId: string;
   createdAt: number;
   cleanup?: () => void;
@@ -55,7 +55,7 @@ export function registerProvidersHandlers(
     try {
       let authUrl: string;
       let userCode: string | undefined;
-      let oauthProvider: GithubProvider | QwenProvider;
+      let oauthProvider: GithubProvider | QwenProvider | CodexProvider;
       let cleanup: (() => void) | undefined;
       let tokenPromise: Promise<string> | undefined;
 
@@ -77,6 +77,16 @@ export function registerProvidersHandlers(
         }
         authUrl = auth.authUrl;
         oauthProvider = qwenProvider;
+        cleanup = auth.cleanup;
+        tokenPromise = auth.tokenPromise;
+      } else if (providerId === 'codex') {
+        const codexProvider = new CodexProvider();
+        const auth = await codexProvider.initAuth(timeout);
+        if (!auth.authUrl) {
+          return { success: false, error: 'Failed to get authorization URL' };
+        }
+        authUrl = auth.authUrl;
+        oauthProvider = codexProvider;
         cleanup = auth.cleanup;
         tokenPromise = auth.tokenPromise;
       } else {
@@ -179,6 +189,25 @@ export function registerProvidersHandlers(
           `provider.qwen.options.apiKey`,
           JSON.stringify(account),
         );
+      } else if (session.providerId === 'codex') {
+        const codexProvider = session.provider as CodexProvider;
+        await codexProvider.getToken(token);
+        const account = codexProvider.getState() as any;
+        if (!account) {
+          return {
+            success: true,
+            data: {
+              status: 'error' as const,
+              error: 'Failed to get account after authentication',
+            },
+          };
+        }
+        user = account.email;
+        configManager.setConfig(
+          true,
+          `provider.codex.options.apiKey`,
+          JSON.stringify(account),
+        );
       }
 
       session.cleanup?.();
@@ -243,6 +272,22 @@ export function registerProvidersHandlers(
         configManager.setConfig(
           true,
           `provider.qwen.options.apiKey`,
+          JSON.stringify(account),
+        );
+      } else if (providerId === 'codex') {
+        const codexProvider = session.provider as CodexProvider;
+        await codexProvider.getToken(code);
+        const account = codexProvider.getState() as any;
+        if (!account) {
+          return {
+            success: false,
+            error: 'Failed to get account after authentication',
+          };
+        }
+        user = account.email;
+        configManager.setConfig(
+          true,
+          `provider.codex.options.apiKey`,
           JSON.stringify(account),
         );
       }
