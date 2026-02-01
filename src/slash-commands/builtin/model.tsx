@@ -34,6 +34,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
   } | null>(null);
   const [groupedModels, setGroupedModels] = useState<GroupedData[]>([]);
   const [nullModels, setNullModels] = useState<NullModel[]>([]);
+  const [recentModels, setRecentModels] = useState<string[]>([]);
 
   useEffect(() => {
     bridge
@@ -47,11 +48,49 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
         }
         setGroupedModels(result.data?.groupedModels || []);
         setNullModels(result.data?.nullModels || []);
+        setRecentModels(result.data?.recentModels || []);
       })
       .catch((error) => {
         console.error('models.list failed:', error);
       });
   }, [cwd]);
+
+  const allModelsMap = new Map<
+    string,
+    { name: string; modelId: string; value: string }
+  >();
+  const providerLookup = new Map<string, string>();
+  for (const group of groupedModels) {
+    for (const model of group.models) {
+      allModelsMap.set(model.value, model);
+      providerLookup.set(model.value, group.provider);
+    }
+  }
+
+  const recentGroup: GroupedData | null =
+    recentModels.length > 0
+      ? {
+          provider: 'Recent',
+          providerId: 'recent',
+          models: recentModels
+            .filter((m) => allModelsMap.has(m))
+            .map((m) => {
+              const model = allModelsMap.get(m)!;
+              const providerName = providerLookup.get(m) || '';
+              return {
+                ...model,
+                name: providerName
+                  ? `${providerName} / ${model.name}`
+                  : model.name,
+              };
+            }),
+        }
+      : null;
+
+  const displayGroups =
+    recentGroup && recentGroup.models.length > 0
+      ? [recentGroup, ...groupedModels]
+      : groupedModels;
 
   return (
     <Box
@@ -84,7 +123,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
       </Box>
       <Box>
         <PaginatedGroupSelectInput
-          groups={groupedModels}
+          groups={displayGroups}
           initialValue={currentModel}
           itemsPerPage={15}
           enableSearch={true}

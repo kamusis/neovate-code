@@ -5,6 +5,7 @@ import type { PreviewSkillsResult } from './skill';
 
 import { registerConfigHandlers } from './nodeBridge/slices/config';
 import { registerGitHandlers } from './nodeBridge/slices/git';
+import { registerGlobalDataHandlers } from './nodeBridge/slices/globalData';
 import { registerMcpHandlers } from './nodeBridge/slices/mcp';
 import { registerModelsHandlers } from './nodeBridge/slices/models';
 import { registerOutputStylesHandlers } from './nodeBridge/slices/outputStyles';
@@ -92,6 +93,7 @@ class NodeHandlerRegistry {
     const clearContext = this.clearContext.bind(this);
 
     registerConfigHandlers(this.messageBus, getContext, clearContext);
+    registerGlobalDataHandlers(this.messageBus, getContext);
     registerMcpHandlers(this.messageBus, getContext);
     registerModelsHandlers(this.messageBus, getContext, clearContext);
     registerOutputStylesHandlers(this.messageBus, getContext);

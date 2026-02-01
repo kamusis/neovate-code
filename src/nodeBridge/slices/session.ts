@@ -238,6 +238,10 @@ export function registerSessionHandlers(
         })
       )?.data.model;
 
+    if (resolvedModel) {
+      context.globalData.addRecentModel(resolvedModel);
+    }
+
     const abortController = new AbortController();
     const key = buildSignalKey(cwd, project.session.id);
     abortControllers.set(key, abortController);

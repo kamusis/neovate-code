@@ -57,6 +57,7 @@ export function registerModelsHandlers(
         currentModel,
         currentModelInfo,
         nullModels,
+        recentModels: context.globalData.getRecentModels(),
       },
     };
   });

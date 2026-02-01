@@ -62,6 +62,25 @@ type ConfigListOutput = {
 };
 
 // ============================================================================
+// GlobalData Handlers
+// ============================================================================
+
+type GlobalDataRecentModelsGetInput = {
+  cwd: string;
+};
+type GlobalDataRecentModelsGetOutput = {
+  success: boolean;
+  data: {
+    recentModels: string[];
+  };
+};
+
+type GlobalDataRecentModelsAddInput = {
+  cwd: string;
+  model: string;
+};
+
+// ============================================================================
 // Git Handlers
 // ============================================================================
 
@@ -257,6 +276,7 @@ type ModelsListOutput = {
       providerId: string;
       modelId: string;
     }>;
+    recentModels: string[];
   };
 };
 
@@ -1170,6 +1190,16 @@ type ToolApprovalOutput = {
  * Maps handler method names to their input and output types.
  */
 export type HandlerMap = {
+  // GlobalData handlers
+  'globalData.recentModels.get': {
+    input: GlobalDataRecentModelsGetInput;
+    output: GlobalDataRecentModelsGetOutput;
+  };
+  'globalData.recentModels.add': {
+    input: GlobalDataRecentModelsAddInput;
+    output: SuccessResponse;
+  };
+
   // Config handlers
   'config.get': { input: ConfigGetInput; output: ConfigGetOutput };
   'config.set': { input: ConfigSetInput; output: SuccessResponse };

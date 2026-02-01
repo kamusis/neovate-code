@@ -5,6 +5,7 @@ import resolve from 'resolve';
 import { AgentManager } from './agent/agentManager';
 import { BackgroundTaskManager } from './backgroundTaskManager';
 import { type Config, ConfigManager } from './config';
+import { GlobalData } from './globalData';
 import { MCPManager } from './mcp';
 import type { MessageBus } from './messageBus';
 import { Paths } from './paths';
@@ -34,6 +35,7 @@ type ContextOpts = {
   agentManager?: AgentManager;
   plugins: (string | Plugin)[];
   fetch?: typeof globalThis.fetch;
+  globalData: GlobalData;
 };
 
 export type ContextCreateOpts = {
@@ -63,6 +65,7 @@ export class Context {
   agentManager?: AgentManager;
   plugins: (string | Plugin)[];
   fetch?: typeof globalThis.fetch;
+  globalData: GlobalData;
   constructor(opts: ContextOpts) {
     this.cwd = opts.cwd;
     this.productName = opts.productName;
@@ -79,6 +82,7 @@ export class Context {
     this.agentManager = opts.agentManager;
     this.plugins = opts.plugins;
     this.fetch = opts.fetch;
+    this.globalData = opts.globalData;
   }
 
   async apply(applyOpts: Omit<PluginApplyOpts, 'pluginContext'>) {
@@ -166,6 +170,7 @@ export class Context {
       messageBus: opts.messageBus,
       plugins: pluginsConfigs,
       fetch: opts.fetch,
+      globalData: new GlobalData({ globalDataPath: paths.getGlobalDataPath() }),
     });
 
     // Create and attach SkillManager
