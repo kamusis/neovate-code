@@ -14,6 +14,7 @@ import type { MessageBus } from '../../messageBus';
 import type { SlashCommand } from '../../slash-commands/types';
 import type { ApprovalCategory, ToolUse } from '../../tool';
 import { safeParseJson } from '../../utils/safeParseJson';
+import { createACPPlugin } from './plugin';
 import { ToolCallHistory } from './toolCallHistory';
 import {
   extractToolResultParts,
@@ -25,7 +26,6 @@ import {
   parseSlashCommand,
   toACPToolContent,
 } from './utils/messageAdapter';
-import { createACPPlugin } from './plugin';
 
 /**
  * Permission rule for a specific tool/category combination
@@ -131,25 +131,6 @@ export class ACPSession {
         // Check if there's a stored permission rule for this tool/category
         const ruleKey = this.getPermissionRuleKey(toolUse.name, category);
         const existingRule = this.permissionRules.get(ruleKey);
-        const permissionResponse = await this.connection.requestPermission({
-          sessionId: this.id,
-          toolCall: {
-            toolCallId: toolUse.callId,
-            kind: mapApprovalCategory(category),
-          },
-          options: [
-            {
-              kind: 'allow_once',
-              name: 'Allow this change',
-              optionId: 'allow',
-            },
-            {
-              kind: 'reject_once',
-              name: 'Skip this change',
-              optionId: 'reject',
-            },
-          ],
-        });
 
         if (existingRule) {
           // Return cached decision without prompting
