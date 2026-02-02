@@ -9,6 +9,7 @@ import {
   type AuthenticateRequest,
   type AuthenticateResponse,
   type CancelNotification,
+  type FileSystemCapability,
   type ForkSessionRequest,
   type ForkSessionResponse,
   type InitializeRequest,
@@ -38,6 +39,7 @@ import { MessageBus, DirectTransport } from '../../messageBus';
 import { NodeBridge } from '../../nodeBridge';
 import type { ACPContextCreateOpts } from './types';
 import { ACPSession } from './session';
+import { createACPPlugin } from './plugin';
 
 const debug = createDebug('neovate:acp:agent');
 
@@ -63,6 +65,7 @@ export class NeovateACPAgent implements Agent {
   private context?: Context;
   private defaultCwd: string;
   private contextCreateOpts: ACPContextCreateOpts;
+  private clientFsCapabilities?: FileSystemCapability; // FileSystemCapability from client
 
   constructor(
     connection: AgentSideConnection,
@@ -80,10 +83,35 @@ export class NeovateACPAgent implements Agent {
     log('Initializing ACP agent');
     debug('Initialize params: %O', params);
 
+    // Check client capabilities for file system support
+    if (params.clientCapabilities?.fs) {
+      log(
+        'Client supports file system capabilities:',
+        params.clientCapabilities.fs,
+      );
+      this.clientFsCapabilities = params.clientCapabilities.fs;
+    }
+    // Create context with ACP plugin if file system is supported
+    log('Creating Neovate context');
+    const plugins = [...(this.contextCreateOpts.plugins || [])];
+
+    // Add ACP file system plugin if capabilities are available
+    if (this.clientFsCapabilities) {
+      log('Adding ACP file system plugin');
+      const acpPlugin = createACPPlugin({
+        connection: this.connection,
+      });
+      plugins.push(acpPlugin);
+    }
+
     // Create MessageBus for event-driven architecture
     log('Creating NodeBridge and MessageBus');
     const nodeBridge = new NodeBridge({
-      contextCreateOpts: this.contextCreateOpts,
+      contextCreateOpts: {
+        ...this.contextCreateOpts,
+        cwd: this.defaultCwd,
+        plugins,
+      },
     });
 
     const [clientTransport, nodeTransport] = DirectTransport.createPair();
@@ -91,21 +119,8 @@ export class NeovateACPAgent implements Agent {
     messageBus.setTransport(clientTransport);
     nodeBridge.messageBus.setTransport(nodeTransport);
 
-    // Auto-approve all tool calls in ACP mode
-    messageBus.registerHandler('toolApproval', async () => {
-      return { approved: true };
-    });
-
     this.messageBus = messageBus;
     this.nodeBridge = nodeBridge;
-
-    // Create context
-    log('Creating Neovate context');
-    this.context = await Context.create({
-      ...this.contextCreateOpts,
-      cwd: this.contextCreateOpts.cwd || this.defaultCwd,
-      messageBus: this.messageBus,
-    });
 
     log('Agent initialized successfully');
     return {
@@ -184,6 +199,7 @@ export class NeovateACPAgent implements Agent {
       sessionId,
       this.messageBus,
       this.connection,
+      this.clientFsCapabilities, // Pass fs capabilities
     );
 
     this.sessions.set(sessionId, acpSession);

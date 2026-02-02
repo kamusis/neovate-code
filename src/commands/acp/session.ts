@@ -24,6 +24,7 @@ import {
   safeParseJson,
   toACPToolContent,
 } from './utils/messageAdapter';
+import { createACPPlugin } from './plugin';
 
 /**
  * ACPSession wraps a Neovate session and handles ACP protocol events
@@ -36,6 +37,7 @@ export class ACPSession {
     private readonly id: string,
     private readonly messageBus: MessageBus,
     private readonly connection: AgentSideConnection,
+    private readonly clientFsCapabilities?: any, // FileSystemCapability from client
   ) {}
 
   /**
@@ -108,7 +110,6 @@ export class ACPSession {
           toolCall: {
             toolCallId: toolUse.callId,
             kind: mapApprovalCategory(category),
-            status: 'pending',
           },
           options: [
             {
@@ -400,12 +401,13 @@ export class ACPSession {
   }
 
   /**
-   * Abort the current prompt
+   * Abort any pending prompt
    */
   async abort() {
     await this.messageBus.request('session.cancel', {
       cwd: this.defaultCwd,
       sessionId: this.id,
     });
+    this.pendingPrompt?.abort();
   }
 }
