@@ -413,8 +413,6 @@ export async function runRun(context: Context) {
     const confirmed = await confirmCommand(rl, result.command);
     if (!confirmed) continue;
 
-    process.stdout.write('\n'); // Add newline after confirmation input
-
     // Check if generated command is cd
     const cdNewCwd = tryChangeDirectory(result.command, cwd);
     if (cdNewCwd !== null) {
