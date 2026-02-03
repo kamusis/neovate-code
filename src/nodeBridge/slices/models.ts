@@ -29,32 +29,27 @@ export function registerModelsHandlers(
           }
         : null;
     const nullModels: { providerId: string; modelId: string }[] = [];
-    const isProviderActive = (provider: Provider): boolean => {
-      if (provider.options?.apiKey) return true;
-      const envs = provider.apiEnv || provider.env || [];
-      return envs.some((envName) => !!process.env[envName]);
-    };
-    const groupedModels = Object.values(providers as Record<string, Provider>)
-      .filter(isProviderActive)
-      .map((provider) => {
-        return {
-          provider: provider.name,
-          providerId: provider.id,
-          models: Object.entries(provider.models || {})
-            .filter(([modelId, model]) => {
-              if (model == null) {
-                nullModels.push({ providerId: provider.id, modelId });
-                return false;
-              }
-              return true;
-            })
-            .map(([modelId, model]) => ({
-              name: (model as ModelData).name,
-              modelId: modelId,
-              value: `${provider.id}/${modelId}`,
-            })),
-        };
-      });
+    const groupedModels = Object.values(
+      providers as Record<string, Provider>,
+    ).map((provider) => {
+      return {
+        provider: provider.name,
+        providerId: provider.id,
+        models: Object.entries(provider.models || {})
+          .filter(([modelId, model]) => {
+            if (model == null) {
+              nullModels.push({ providerId: provider.id, modelId });
+              return false;
+            }
+            return true;
+          })
+          .map(([modelId, model]) => ({
+            name: (model as ModelData).name,
+            modelId: modelId,
+            value: `${provider.id}/${modelId}`,
+          })),
+      };
+    });
     return {
       success: true,
       data: {
