@@ -304,8 +304,10 @@ export async function runRun(context: Context) {
     alias: {
       model: 'm',
       help: 'h',
+      quiet: 'q',
+      yes: 'y',
     },
-    boolean: ['help'],
+    boolean: ['help', 'quiet', 'yes'],
     string: ['model'],
   });
 
@@ -315,6 +317,7 @@ export async function runRun(context: Context) {
   }
 
   const model = argv.model || context.config.smallModel || context.config.model;
+  const quiet = argv.quiet || argv.yes || context.config.quiet;
 
   // Initialize NodeBridge for AI queries
   const nodeBridge = new NodeBridge({
@@ -331,14 +334,36 @@ export async function runRun(context: Context) {
   messageBus.setTransport(clientTransport);
   nodeBridge.messageBus.setTransport(nodeTransport);
 
-  // Create readline interface
+  // Track current working directory
+  let cwd = context.cwd;
+
+  // Initial prompt from CLI arguments if any
+  // Note: argv._[0] is 'run', so the prompt is from index 1 onwards
+  let firstPrompt: string | undefined = argv._.slice(1).join(' ') || undefined;
+
+  if (quiet) {
+    if (!firstPrompt) {
+      console.error('Error: Prompt is required in quiet mode');
+      process.exit(1);
+    }
+
+    // Single-shot execution in quiet mode
+    if (!isNaturalLanguage(firstPrompt)) {
+      await executeCommand(firstPrompt, cwd);
+    } else {
+      const result = await generateCommand(messageBus, firstPrompt, cwd, model);
+      if (result) {
+        await executeCommand(result.command, cwd);
+      }
+    }
+    process.exit(0);
+  }
+
+  // Create readline interface for interactive mode
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
-
-  // Track current working directory
-  let cwd = context.cwd;
 
   // Handle Ctrl+D to exit
   rl.on('close', () => {
@@ -348,7 +373,13 @@ export async function runRun(context: Context) {
 
   // Main loop
   while (true) {
-    const userInput = await askPrompt(rl, cwd);
+    let userInput: string;
+    if (firstPrompt) {
+      userInput = firstPrompt;
+      firstPrompt = undefined; // Only use once
+    } else {
+      userInput = await askPrompt(rl, cwd);
+    }
 
     if (userInput === '') {
       // Empty input, just continue to next prompt
@@ -381,6 +412,8 @@ export async function runRun(context: Context) {
 
     const confirmed = await confirmCommand(rl, result.command);
     if (!confirmed) continue;
+
+    process.stdout.write('\n'); // Add newline after confirmation input
 
     // Check if generated command is cd
     const cdNewCwd = tryChangeDirectory(result.command, cwd);
